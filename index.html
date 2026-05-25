@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学生抽選ドラム</title>
+  <style>
+    /* 全体のシンプルな背景とリセット */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+      background-color: #f4f7f6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: #333;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+      font-size: 24px;
+      color: #4a5568;
+    }
+
+    /* ボタンのスタイリング */
+    .btn-group button {
+      background-color: #3182ce;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 15px 30px;
+      margin: 0 10px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    .btn-group button:hover {
+      background-color: #2b6cb0;
+    }
+
+    .btn-group button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .reset-btn {
+      margin-top: 40px;
+      background-color: #e2e8f0;
+      color: #4a5568;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .reset-btn:hover {
+      background-color: #cbd5e0;
+    }
+
+    /* ドラムコンテナ（画面全体レイアウト用） */
+    #drum-screen {
+      display: none;
+      text-align: center;
+    }
+
+    #drums-container {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+    }
+
+    /* 個別のドラムのリアリティ演出 */
+    .drum {
+      width: 160px;
+      height: 150px; /* 50px × 3項目分が見えるように設定 */
+      background-color: #fff;
+      border: 4px solid #2d3748;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      /* 上下に強いシャドウを入れて、円柱状に回転している立体感を演出 */
+      box-shadow: 
+        inset 0px 40px 25px -20px rgba(0, 0, 0, 0.7), 
+        inset 0px -40px 25px -20px rgba(0, 0, 0, 0.7),
+        0 10px 15px -3px rgba(0, 0, 0, 0.2);
+    }
+
+    /* 中央の当たりを強調する赤いハイライト */
+    .drum-highlight {
+      position: absolute;
+      top: 50px;
+      left: 0;
+      width: 100%;
+      height: 50px;
+      border-top: 2px solid #e53e3e;
+      border-bottom: 2px solid #e53e3e;
+      background-color: rgba(229, 62, 62, 0.15);
+      pointer-events: none; /* クリックなどを透過させる */
+      box-sizing: border-box;
+      z-index: 10;
+    }
+
+    /* 回転するリスト全体 */
+    .drum-strip {
+      /* translateY をJSで動かすことで回転を表現 */
+      will-change: transform; 
+    }
+
+    /* ドラムの中の1つの要素 */
+    .drum-item {
+      height: 50px;
+      line-height: 50px;
+      font-size: 22px;
+      font-weight: bold;
+      text-align: center;
+      color: #2d3748;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="setup-screen">
+    <h1>抽選する人数を選んでください</h1>
+    <div class="btn-group">
+      <button onclick="startLottery(1)">1名</button>
+      <button onclick="startLottery(2)">2名</button>
+      <button onclick="startLottery(3)">3名</button>
+    </div>
+  </div>
+
+  <div id="drum-screen">
+    <div id="drums-container"></div>
+    <button class="reset-btn" onclick="resetApp()">もう一度抽選する</button>
+  </div>
+
+  <script>
+    // 14名の学生リスト（必要に応じて名前を変更してください）
+    const students = [
+      "佐藤", "鈴木", "高橋", "田中", "伊藤", 
+      "渡辺", "山本", "中村", "小林", "加藤", 
+      "吉田", "山田", "佐々木", "山口"
+    ];
+
+    function startLottery(num) {
+      // 画面の切り替え
+      document.getElementById('setup-screen').style.display = 'none';
+      document.getElementById('drum-screen').style.display = 'block';
+      
+      const drumsContainer = document.getElementById('drums-container');
+      drumsContainer.innerHTML = '';
+
+      // 重複なしで当選者を指定数ランダムに選ぶ（Fisher-Yatesシャッフルを利用）
+      const shuffled = [...students];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const winners = shuffled.slice(0, num);
+
+      // ドラムの生成とアニメーション設定
+      winners.forEach((winner, index) => {
+        // 回転時間：1個目は10秒、2個目は12秒、3個目は14秒
+        const duration = 10 + (index * 2); 
+        
+        // アニメーションを長く見せるため、ドラムごとのダミーアイテム数を増やす
+        const itemCount = 60 + (index * 20); 
+
+        // ドラムの外枠作成
+        const drum = document.createElement('div');
+        drum.className = 'drum';
+
+        // 中央の赤いハイライト枠
+        const highlight = document.createElement('div');
+        highlight.className = 'drum-highlight';
+        drum.appendChild(highlight);
+
+        // スクロールするリスト作成
+        const strip = document.createElement('div');
+        strip.className = 'drum-strip';
+        // cubic-bezier で「最初は速く、最後は非常にゆっくり止まる」リアルな挙動を再現
+        strip.style.transition = `transform ${duration}s cubic-bezier(0.1, 0.9, 0.2, 1)`;
+
+        // 回転中のダミー名前を生成
+        for(let i = 0; i < itemCount - 2; i++) {
+          const randomStudent = students[Math.floor(Math.random() * students.length)];
+          const item = document.createElement('div');
+          item.className = 'drum-item';
+          item.textContent = randomStudent;
+          strip.appendChild(item);
+        }
+
+        // 当たりの名前を追加（最後から2番目に配置すると中央に止まる）
+        const winnerItem = document.createElement('div');
+        winnerItem.className = 'drum-item';
+        winnerItem.textContent = winner;
+        strip.appendChild(winnerItem);
+
+        // 最後のダミー（当たりが中央に停止したときの下に表示される名前）
+        const dummyLastItem = document.createElement('div');
+        dummyLastItem.className = 'drum-item';
+        dummyLastItem.textContent = students[Math.floor(Math.random() * students.length)];
+        strip.appendChild(dummyLastItem);
+
+        drum.appendChild(strip);
+        drumsContainer.appendChild(drum);
+
+        // 少し遅延を入れてからCSSのtransformを適用し、アニメーションを発火させる
+        setTimeout(() => {
+          // 1つのアイテムの高さが 50px
+          // (全体アイテム数 - 2) * 50 を上方向に移動させると、最後から2番目(当たり)が中央に来る
+          const moveY = (itemCount - 2) * 50; 
+          strip.style.transform = `translateY(-${moveY}px)`;
+        }, 50); // 50ms待機してからアニメーション開始
+      });
+    }
+
+    function resetApp() {
+      // 初期画面に戻る処理
+      document.getElementById('setup-screen').style.display = 'flex';
+      document.getElementById('drum-screen').style.display = 'none';
+      document.getElementById('drums-container').innerHTML = '';
+    }
+  </script>
+</body>
+</html>
