@@ -19,7 +19,7 @@
       color: #333;
     }
 
-    /* 1.5倍サイズ: 24px -> 36px */
+    /* 1.5倍サイズ */
     h1 {
       margin-bottom: 45px;
       font-size: 36px;
@@ -75,10 +75,10 @@
     #drums-container {
       display: flex;
       justify-content: center;
-      gap: 45px; /* 30px -> 45px */
+      gap: 45px;
     }
 
-    /* ドラム本体 (1.5倍: width 160->240, height 150->225) */
+    /* ドラム本体 (1.5倍サイズ) */
     .drum {
       width: 240px;
       height: 225px; /* 75px × 3項目分 */
@@ -87,17 +87,17 @@
       border-radius: 18px;
       position: relative;
       overflow: hidden;
-      /* シャドウも1.5倍に拡張して立体感を維持 */
+      /* 立体感を出すインナーシャドウ */
       box-shadow: 
         inset 0px 60px 37px -30px rgba(0, 0, 0, 0.7), 
         inset 0px -60px 37px -30px rgba(0, 0, 0, 0.7),
         0 15px 22px -5px rgba(0, 0, 0, 0.2);
     }
 
-    /* 中央の当たりを強調する赤いハイライト (高さ 50->75) */
+    /* 中央の当たりを強調する赤いハイライト */
     .drum-highlight {
       position: absolute;
-      top: 75px;
+      top: 75px; /* 2段目（中央）に配置 */
       left: 0;
       width: 100%;
       height: 75px;
@@ -114,7 +114,7 @@
       will-change: transform; 
     }
 
-    /* ドラムの中の1つの要素 (1.5倍: height 50->75, font-size 22->33) */
+    /* ドラムの中の1つの要素 */
     .drum-item {
       height: 75px;
       line-height: 75px;
@@ -143,6 +143,7 @@
   </div>
 
   <script>
+    // 14名の学生リスト
     const students = [
       "佐藤", "鈴木", "高橋", "田中", "伊藤", 
       "渡辺", "山本", "中村", "小林", "加藤", 
@@ -156,21 +157,20 @@
       const drumsContainer = document.getElementById('drums-container');
       drumsContainer.innerHTML = '';
 
-      // 当選者を重複なしでランダムに選出
+      // 【解決策の核心】最初に応募者全員を完全にシャッフルし、当選者を重複なしで決定
       const shuffled = [...students];
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
-      const winners = shuffled.slice(0, num);
+      const winners = shuffled.slice(0, num); // ここで選ばれた人は絶対に重複しません
 
       winners.forEach((winner, index) => {
-        // 回転時間：10秒、12秒、14秒
+        // 回転時間（10秒、12秒、14秒）
         const duration = 10 + (index * 2); 
         
-        // 酔いを防ぐため、総アイテム数を減らし、回転速度を落とす
-        // 1個目: 25個, 2個目: 31個, 3個目: 37個
-        const itemCount = 25 + (index * 6); 
+        // 途中で通過するダミー名前の数（酔い防止のため少なめに設定）
+        const dummyCount = 20 + (index * 6); 
 
         const drum = document.createElement('div');
         drum.className = 'drum';
@@ -181,29 +181,27 @@
 
         const strip = document.createElement('div');
         strip.className = 'drum-strip';
-        // より穏やかに減速するイージング
+        // 穏やかに減速するイージング
         strip.style.transition = `transform ${duration}s cubic-bezier(0.2, 0.9, 0.3, 1)`;
 
-        // ドラム内での名前の重複（連続表示）を防ぐため、14名を均等にサイクルさせる
+        // ドラム内部のスクロール用ダミー名前リストを作成（同じ名前が連続しないように配慮）
         let stripNames = [];
-        while(stripNames.length < itemCount - 2) {
+        while(stripNames.length < dummyCount) {
           let cycle = [...students];
-          // サイクル内をシャッフル
           for(let i = cycle.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [cycle[i], cycle[j]] = [cycle[j], cycle[i]];
           }
-          // 継ぎ目で同じ名前が連続しないようにする処理
           if (stripNames.length > 0 && stripNames[stripNames.length - 1] === cycle[0]) {
             [cycle[0], cycle[cycle.length - 1]] = [cycle[cycle.length - 1], cycle[0]];
           }
           stripNames.push(...cycle);
         }
         
-        // 必要な数だけ切り出し
-        stripNames = stripNames.slice(0, itemCount - 2);
+        // 指定したダミーの数だけ切り出す
+        stripNames = stripNames.slice(0, dummyCount);
 
-        // ダミーの名前要素を追加
+        // ダミーの名前をドラムに追加
         stripNames.forEach(name => {
           const item = document.createElement('div');
           item.className = 'drum-item';
@@ -211,28 +209,26 @@
           strip.appendChild(item);
         });
 
-        // 当たりの名前を追加（最後から2番目＝中央に止まる）
+        // 【本物の当たり】をダミーのすぐ次に追加
         const winnerItem = document.createElement('div');
         winnerItem.className = 'drum-item';
         winnerItem.textContent = winner;
         strip.appendChild(winnerItem);
 
-        // 最後のダミー（当たりの下に隠れる名前。当たりとは別の人にする）
-        let lastDummyName = students[Math.floor(Math.random() * students.length)];
-        while (lastDummyName === winner) {
-          lastDummyName = students[Math.floor(Math.random() * students.length)];
-        }
+        // 最下段にチラ見えする用の最終ダミーを追加
         const dummyLastItem = document.createElement('div');
         dummyLastItem.className = 'drum-item';
-        dummyLastItem.textContent = lastDummyName;
+        dummyLastItem.textContent = students[Math.floor(Math.random() * students.length)];
         strip.appendChild(dummyLastItem);
 
         drum.appendChild(strip);
         drumsContainer.appendChild(drum);
 
-        // 1つのアイテムの高さが 75px
+        // 【位置計算の修正】
+        // dummyCount個分進んだ次の要素（winner）がぴったり中央（2段目）に止まるよう、
+        // 上方にずらす距離を「(dummyCount - 1) * 75px」に修正しました。
         setTimeout(() => {
-          const moveY = (itemCount - 2) * 75; 
+          const moveY = (dummyCount - 1) * 75; 
           strip.style.transform = `translateY(-${moveY}px)`;
         }, 50);
       });
